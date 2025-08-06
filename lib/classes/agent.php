@@ -8,52 +8,54 @@ use ParserCSV\ParserCSV;
 
 class Agent
 {
-
-    public static function run()
+    public static function run(int $callback = 0)
     {
+        if (!Loader::includeModule('leadspace.parsercsv') || !Loader::includeModule('crm')) {
+            return __METHOD__ . '(1);';
+        }
 
-
+        date_default_timezone_set('Europe/Moscow');
         $currentHour = (int)date('G');
 
-        if ($currentHour < 8 || $currentHour >= 19) {
-            return "\\AgentFunctions\\Agent::run();";
+        if ($currentHour < 6 || $currentHour >= 7 && $callback !== 8) {
+
+            return __METHOD__ . "(8);";
+
+        } else {
+
+            if ($currentHour < 8 || $currentHour >= 19) {
+                return __METHOD__ . "(2);";
+            }
         }
 
         $filePath = __DIR__ . '/../../bitrix.csv';
 
-
         try {
-            // Подключаем модули
-            if (!Loader::includeModule('leadspace.parsercsv') || !Loader::includeModule('crm')) {
-                self::logError('Не удалось подключить необходимые модули');
-                return "\\AgentFunctions\\Agent::run();";
-            }
-
             $parser = new ParserCSV(false);
-
-            // Обработка CSV
             $csvData = $parser->parseToArray($filePath);
+
             if (empty($csvData)) {
                 self::logError('CSV файл пуст или не содержит данных');
-                return "\\AgentFunctions\\Agent::run();";
+                return __METHOD__ . '(3);';
             }
 
-            // Подготовка ID
-            $allIds = array_unique(array_filter(array_map(function ($item) {
-                return !empty($item['id']) ? ltrim(explode('-', $item['id'])[1], '0') : null;
-            }, $csvData)));
-
-            if (empty($allIds)) {
-                self::logError('Не найдено ID для поиска');
-                return "\\AgentFunctions\\Agent::run();";
+            // Создаем массив для сопоставления ID и суммы из CSV
+            $csvAmounts = [];
+            foreach ($csvData as $item) {
+                if (!empty($item['id']) && isset($item['amount'])) {
+                    $id = ltrim(explode('-', $item['id'])[1], '0');
+                    $csvAmounts[$id] = (float)$item['amount'];
+                }
             }
 
-            // Настройки пагинации
+            if (empty($csvAmounts)) {
+                self::logError('Не найдено ID и сумм для обновления');
+                return __METHOD__ . '(4);';
+            }
+
             $batchSize = 500;
-            $deals = [];
-
-            // Разбиваем на пачки
-            $idBatches = array_chunk($allIds, $batchSize);
+            $updatedCount = 0;
+            $idBatches = array_chunk(array_keys($csvAmounts), $batchSize);
 
             foreach ($idBatches as $batchIds) {
                 $dbResult = \CCrmDeal::GetListEx(
@@ -64,38 +66,47 @@ class Agent
                     ],
                     false,
                     false,
-                    ['ID', 'TITLE', 'STAGE_ID', 'UF_CRM_1730208607985', 'OPPORTUNITY', 'DATE_CREATE']
+                    ['ID', 'UF_CRM_1730208607985', 'OPPORTUNITY']
                 );
-
-                if (!$dbResult) {
-                    self::logError("Ошибка при обработке пачки ID: " . implode(',', $batchIds));
-                    continue;
-                }
 
                 while ($deal = $dbResult->Fetch()) {
                     $dealId = $deal['UF_CRM_1730208607985'];
-                    $deals[$dealId] = $deal;
+
+                    // Если сумма в CSV отличается от суммы в сделке
+                    if (isset($csvAmounts[$dealId]) && (float)$deal['OPPORTUNITY'] != $csvAmounts[$dealId]) {
+                        $updateFields = ['OPPORTUNITY' => $csvAmounts[$dealId]];
+
+                        $dealObj = new \CCrmDeal(false);
+                        if ($dealObj->Update($deal['ID'], $updateFields)) {
+                            $updatedCount++;
+                        } else {
+                            self::logError("Ошибка обновления сделки ID: {$deal['ID']}");
+                        }
+                    }
                 }
             }
 
-            if (empty($deals)) {
-                $parser->FileLog('Нет данных для обработки', 'deals');
-                return "\\AgentFunctions\\Agent::run();";
-            }
+            $logMessage = "Обработано сделок: " . count($csvAmounts);
+            $logMessage .= "Обновлено сумм: $updatedCount\n";
 
+            // // Логируем несколько примеров обновлений
+            // $examples = array_slice($csvAmounts, 0, 3, true);
+            // foreach ($examples as $id => $amount) {
+            //     $logMessage .= "Пример: ID $id - новая сумма $amount\n";
+            // }
+
+            $parser->FileLog($logMessage, 'deals');
             $parser->DeleteFile($filePath);
-            //$parser->FileLog('Скрипт выполен успешно', 'deals');
 
-            return "\\AgentFunctions\\Agent::run();";
+            return __METHOD__ . '(5);';
         } catch (Exception $e) {
             self::logError($e->getMessage());
-            return "\\AgentFunctions\\Agent::run();";
+            return __METHOD__ . '(6);';
         }
     }
 
     protected static function logError(string $message): void
     {
-        // Используем либо вашу реализацию FileLog, либо стандартное логирование
         if (method_exists('ParserCSV\ParserCSV', 'FileLog')) {
             ParserCSV::FileLog($message, 'error');
         } else {

@@ -76,33 +76,33 @@ class leadspace_parsercsv extends CModule
         );
     }
 
-public function InstallFiles()
-{
-    CopyDirFiles(
-        __DIR__ . '/../admin',  
-        $_SERVER['DOCUMENT_ROOT'] . '/bitrix/admin',  
-        true,    
-        true    
-    );
+    public function InstallFiles()
+    {
+        CopyDirFiles(
+            __DIR__ . '/../admin',
+            $_SERVER['DOCUMENT_ROOT'] . '/bitrix/admin',
+            true,
+            true
+        );
 
-    return true;
-}
-
-public function UnInstallFiles()
-{
-    
-    $moduleAdminDir = basename(__DIR__ . '/../admin');
-    
-    
-    DeleteDirFilesEx('/bitrix/admin/' . $moduleAdminDir);
-    
-
-    if (is_dir($_SERVER['DOCUMENT_ROOT'] . '/bitrix/admin/' . $moduleAdminDir)) {
-        @rmdir($_SERVER['DOCUMENT_ROOT'] . '/bitrix/admin/' . $moduleAdminDir);
+        return true;
     }
 
-    return true;
-}
+    public function UnInstallFiles()
+    {
+
+        $moduleAdminDir = basename(__DIR__ . '/../admin');
+
+
+        DeleteDirFilesEx('/bitrix/admin/' . $moduleAdminDir);
+
+
+        if (is_dir($_SERVER['DOCUMENT_ROOT'] . '/bitrix/admin/' . $moduleAdminDir)) {
+            @rmdir($_SERVER['DOCUMENT_ROOT'] . '/bitrix/admin/' . $moduleAdminDir);
+        }
+
+        return true;
+    }
 
     public function InstallEvents()
     {
@@ -114,7 +114,7 @@ public function UnInstallFiles()
         return true;
     }
 
-  public function InstallCron()
+    public function InstallCron()
     {
 
         // Добавляем cron задачу
@@ -139,4 +139,3 @@ public function UnInstallFiles()
         return true;
     }
 }
-
