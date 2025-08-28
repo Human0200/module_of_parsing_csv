@@ -34,7 +34,6 @@ class ParserCSV
         $lines = explode("\n", $content);
 
         $data = [];
-        $headers = ['id', 'date', 'amount', 'client', 'status'];
 
         // Используем переданное значение или значение из конструктора
         $skip = $skipFirstLine ?? $this->skipFirstLine;
@@ -53,7 +52,8 @@ class ParserCSV
                 'date' => trim($parts[1]),
                 'amount' => trim($parts[2]),
                 'client' => trim($parts[3]),
-                'status' => trim($parts[4])
+                'status' => trim($parts[4]),
+                'status_1c' => trim($parts[5]),
             ];
         }
 
