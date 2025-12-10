@@ -18,6 +18,7 @@ class Agent
         $currentHour = (int)date('G');
 
         if ($currentHour < 6 || $currentHour >= 7 && $callback !== 8) {
+            self::logError('Агент запущен в нерабочее время: ' . $currentHour . ' часов.');
             return __METHOD__ . "(8);";
         } else {
             if ($currentHour < 8 || $currentHour >= 19) {

@@ -122,7 +122,7 @@ class leadspace_parsercsv extends CModule
             "\\AgentFunctions\\Agent::run();", // Команда для выполнения
             "leadspace.parsercsv",                      // Модуль
             "N",                                  // Не повторять при ошибке
-            300,                                // Интервал 
+            150,                                // Интервал 
             "",                                    // Дата первой проверки
             "Y",                                   // Активность
             "",                                   // Дата следующего запуска
